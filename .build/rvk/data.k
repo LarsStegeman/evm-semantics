@@ -175,15 +175,19 @@ module EVM-DATA
 
 
     syntax Int ::= Int "^Word" Int [function]
- // -----------------------------------------
-    rule W0 ^Word W1 => (W0 ^Word (W1 /Int 2)) ^Word 2  requires W1 >=Int pow16 andBool W1 %Int 2 ==Int 0
-    rule W0 ^Word W1 => (W0 ^Word (W1 -Int 1)) *Word W0 requires W1 >=Int pow16 andBool W1 %Int 2 ==Int 1
+    syntax Int ::= powmod(Int, Int, Int) [function]
+ // -----------------------------------------------
 
 
 // RV-K has a more efficient power-modulus operator.
 
 
-    rule W0 ^Word W1 => W0 ^%Int W1 pow256 requires W1 <Int pow16
+    rule W0 ^Word W1 => powmod(W0, W1, pow256)
+
+
+
+    rule powmod(W0, W1, W2) => W0 ^%Int W1 W2 requires W2 =/=Int 0
+    rule powmod(W0, W1, 0) => 0
 
 
 // `/sWord` and `%sWord` give the signed interperetations of `/Word` and `%Word`.
