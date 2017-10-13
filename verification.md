@@ -11,7 +11,8 @@ module VERIFICATION
     imports EVM
 ```
 
-This `smt-lemma` helps Z3 reason about stack over/under flow.
+These `smt-lemma` helps Z3 reason about stack over/under flow,
+and to keep various constraints down to reasonable sizes.
 
 ```{.k .uiuck}
     rule #sizeWordStack ( _ , _ ) >=Int 0 => true [smt-lemma]
@@ -23,7 +24,65 @@ This `smt-lemma` helps Z3 reason about stack over/under flow.
     rule (X -Int A) -Int B    => X -Int (A +Int B)    [smt-lemma]
     rule ((X -Int A) >=Int B) => (X >=Int (A +Int B)) [smt-lemma]
     rule (N +Int X <Int M)    => X <Int (M -Int N)    [smt-lemma]
+    rule #sizeWordStack ( _ ) >=Int 0 => true [smt-lemma]
+
+    rule (X -Int A) -Int B => X -Int (A +Int B) [smt-lemma]
+    rule ((X -Int A) >=Int B) => (X >=Int (A +Int B)) [smt-lemma]
+
+    rule (X >=Int A ==K true) andBool ((X >=Int B ==K true) andBool P)
+      => (X >=Int A ==K true) andBool P requires A >=Int B [smt-lemma]
+    rule (X >=Int A ==K true) andBool ((X >=Int B ==K true) andBool P)
+      => (X >=Int B ==K true) andBool P requires B >=Int A [smt-lemma]
+
+    rule (N +Int X <Int M) => X <Int (M -Int N) [smt-lemma]
+    rule 1 +Int (N +Int #sizeWordStack(S)) => (N +Int 1) +Int #sizeWordStack(S) [smt-lemma]
+       // from recursing over bytes
+    rule (N +Int #sizeWordStack(S)) +Int 1 => (N +Int 1) +Int #sizeWordStack(S) [smt-lemma]
+    rule (N +Int #sizeWordStack(S)) +Int 0 =>  N +Int #sizeWordStack(S) [smt-lemma]
+    rule (N +Int #sizeWordStack(S)) +Int -1 => (N +Int -1) +Int #sizeWordStack(S) [smt-lemma]
+    rule (N +Int #sizeWordStack(S)) +Int -2 => (N +Int -2) +Int #sizeWordStack(S) [smt-lemma]
+       // from callstack, maybe?
+
+    rule #take(N,#uint160(X)) => #uint160(X) ++ #take(N -Int 20, .WordStack) requires N >=Int 20 [smt-lemma]
+    rule #asWord(N:(#uint160(X)++W)) => #asWord((N *Int pow160 +Int X) : W) [smt-lemma]
+
+    rule X +Int 0 => X [smt-lemma]
+
+    rule (X +Int Y) *Int A => (X *Int A) +Int (Y *Int A) [smt-lemma]
+    rule (X +Int Y) %Int B => (X %Int B) +Int (Y %Int B) [smt-lemma]
+
+    rule (X +Int Y) /Int N => (X /Int N) +Int (Y /Int N) requires X %Int N ==Int 0 [smt-lemma]
+    rule (X *Int A) %Int B => (X %Int (B /Int A)) *Int A requires B %Int A ==Int 0 [smt-lemma]
+
+    rule (X %Int M) %Int M => X %Int M [smt-lemma]
+    rule (X %Int A) %Int B => X %Int B requires A %Int B ==Int 0 [smt-lemma]
+    rule (X %Int A) %Int B => X %Int A requires B %Int A ==Int 0 [smt-lemma]
+
+    rule (X %Int A) /Int B => (X /Int B) %Int (A /Int B) requires A %Int B ==Int 0 [smt-lemma]
+
+    rule (X *Int A) *Int 256 => X *Int (A *Int 256) [smt-lemma]
+    rule (X *Int A) /Int B => X /Int (B /Int A) requires B %Int A ==Int 0 [smt-lemma]
+
+syntax WordStack ::= #uint160(Int) [function, smtlib(uint160)]
 ```
+
+
+    rule (((X *Int A) %Int M) *Int B) %Int M => (X *Int (A *Int B)) %Int M [smt-lemma]
+
+    rule 1461501637330902918203684832716283019655932542975 &Int X => X %Int 1461501637330902918203684832716283019655932542976 [smt-lemma]
+    rule X &Int 1461501637330902918203684832716283019655932542975 => X %Int 1461501637330902918203684832716283019655932542976 [smt-lemma]
+    rule 115792089237316195423570985008687907853269984665640564039457584007913129639935 &Int X
+      => X %Int 115792089237316195423570985008687907853269984665640564039457584007913129639936 [smt-lemma]
+    rule X &Int 115792089237316195423570985008687907853269984665640564039457584007913129639935
+      => X %Int 115792089237316195423570985008687907853269984665640564039457584007913129639936 [smt-lemma]
+    rule 255 &Int X => X %Int 256 [smt-lemma]
+    rule X &Int 255 => X %Int 256 [smt-lemma]
+
+    rule (X +Int 0) => X [smt-lemma]
+    rule (X /Int N) /Int 256 => X /Int (N *Int 256) [smt-lemma]
+    rule X /Int N => 0 requires X >=Int 0 andBool X <Int N [smt-lemma]
+    rule (X %Int A) /Int B  => 0 requires B >=Int A [smt-lemma]
+
 
 Sum to N
 --------
