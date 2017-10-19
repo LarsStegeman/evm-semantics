@@ -413,11 +413,12 @@ The local memory of execution is a byte-array (instead of a word-array).
 -   `#asByteStack` will split a single word up into a `WordStack` where each word is a byte wide.
 
 ```{.k .uiuck .rvk}
-    syntax Int ::= #asWord ( WordStack ) [function, smtlib(asWord)]
+    syntax Int ::= #asWord ( WordStack ) [function]
+    syntax Int ::= #asWordAux ( Int , WordStack ) [function, smtlib(asWordAux)]
  // ---------------------------------------------------------------
-    rule #asWord( .WordStack )    => 0
-    rule #asWord( W : .WordStack) => W
-    rule #asWord( W0 : W1 : WS )  => #asWord(((W0 *Word 256) +Word W1) : WS)
+    rule #asWord( W ) => #asWordAux( 0 , W )
+    rule #asWordAux( N , .WordStack )    => N
+    rule #asWordAux( N , W1 : WS )  => #asWordAux((N *Word 256) +Word W1, WS)
 
     syntax Account ::= #asAccount ( WordStack ) [function]
  // ------------------------------------------------------
@@ -433,7 +434,7 @@ The local memory of execution is a byte-array (instead of a word-array).
 
     syntax WordStack ::= #asByteStackWidth ( Int , Int )             [smtlib(asByteStackWidth)]
                        | #asByteStackWidth ( Int , Int, WordStack ) [function, klabel(#asByteStackWidthAux), smtlib(asByteStackWidthAux)]
-//    rule #asByteStackWidth( N , W ) => #asByteStackWidth( N , W , .WordStack )
+    rule #asByteStackWidth( N , W ) => #asByteStackWidth( N , W , .WordStack )
     rule #asByteStackWidth( 0 , _ , WS ) => WS
     rule #asByteStackWidth( N , W , WS ) => #asByteStackWidth( N -Int 1 , W /Int 256 , W %Int 256 : WS ) requires N >Int 0
 

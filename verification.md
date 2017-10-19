@@ -43,8 +43,57 @@ and to keep various constraints down to reasonable sizes.
     rule (N +Int #sizeWordStack(S)) +Int -2 => (N +Int -2) +Int #sizeWordStack(S) [smt-lemma]
        // from callstack, maybe?
 
-    rule #take(N,#uint160(X)) => #uint160(X) ++ #take(N -Int 20, .WordStack) requires N >=Int 20 [smt-lemma]
-    rule #asWord(N:(#uint160(X)++W)) => #asWord((N *Int pow160 +Int X) : W) [smt-lemma]
+    rule #take(N,#uint(X)) => #uint(X) ++ #take(N -Int 32, .WordStack) requires N >=Int 32 [smt-lemma]
+    rule #asWordAux(N,(#uint(X)++W)) => #asWordAux(((N *Int pow256) +Int #getIntBytes(X,0,32,0)), W) [smt-lemma]
+    rule #asWordAux(N,#take(K,#uint(X))) =>
+         (N *Int (2 ^Int (K *Int 8)) +Int #getIntBytes(X,32 -Int K,32,0)) %Int pow256
+
+syntax WordStack ::= #uint(Int) [function, smtlib(uint256)]
+
+    rule 0 +Int X => X
+
+    rule Y *Int (X +Int #getIntBytes(T,A,B,S)) => (X +Int #getIntBytes(T,A,B,S)) *Int Y
+    rule (X +Int #getIntBytes(T,A,B,S)) *Int Y
+      => X *Int Y +Int #getIntBytes(T,A,B,S) *Int Y
+
+    rule (X +Int #getIntBytes(T,A,B,S)) %Int Y
+      => X %Int Y +Int #getIntBytes(T,A,B,S) %Int Y
+      requires X &Int ((2 ^Int B) -Int (2^Int A)) ==Int 0
+
+    rule (X +Int #getIntBytes(T,A,B,S)) /Int Y
+      => X /Int Y +Int #getIntBytes(T,A,B,S) /Int Y
+      requires X &Int ((2 ^Int B) -Int (2^Int A)) ==Int 0
+
+    rule Y +Int (X +Int #getIntBytes(T,A,B,S))
+      => (Y +Int Y) +Int #getIntBytes(T,A,B,S)
+    rule (X +Int #getIntBytes(T,A,B,S)) +Int Y
+      => (X +Int Y) +Int #getIntBytes(T,A,B,S)
+
+    rule #getIntBytes(T,A,B,S) *Int 256
+      => #getIntBytes(T,A,minInt(B,31 -Int S),S +Int 1)
+    rule #getIntBytes(T,A,B,S) %Int 115792089237316195423570985008687907853269984665640564039457584007913129639936
+      => #getIntBytes(T,A,minInt(B,32 -Int S),S)
+    rule #getIntBytes(T,A,B,S) /Int D
+      => #getIntBytes(T,A,B,S -Int 1) /Int (D /Int 256)
+      requires S >Int 0 andBool D %Int 256 ==Int 0
+    rule #getIntBytes(T,A,B,0) /Int D
+      => #getIntBytes(T,A +Int 1,B,0) /Int (D /Int 256)
+      requires A <Int B andBool D %Int 256 ==Int 0
+    rule #getIntBytes(T,A,A,S) => 0
+    rule #getIntBytes(T,A,B,S) +Int 0 => #getIntBytes(T,A,B,S)
+
+    rule 1461501637330902918203684832716283019655932542975 &Int #getIntBytes(T,A,B,S)
+      => #getIntBytes(T,A,minInt(B,20-Int S),S)
+
+syntax Int ::= #getIntBytes(Int,Int,Int,Int) [function, smtlib(get_int_bytes)]
+```
+
+    #getIntBytes(T,A,B,S) representes an integer formed by division, mod,
+    masking, etc. which corresponds to the number formed from bytes [A,B)
+    from the big-endian representation of the number T, shifted left by S bytes.
+
+    #getIntBytes(T,A,B,S) = ((T%2^B) >> A) << S
+
 
     rule X +Int 0 => X [smt-lemma]
 
@@ -63,8 +112,6 @@ and to keep various constraints down to reasonable sizes.
     rule (X *Int A) *Int 256 => X *Int (A *Int 256) [smt-lemma]
     rule (X *Int A) /Int B => X /Int (B /Int A) requires B %Int A ==Int 0 [smt-lemma]
 
-syntax WordStack ::= #uint160(Int) [function, smtlib(uint160)]
-```
 
 
     rule (((X *Int A) %Int M) *Int B) %Int M => (X *Int (A *Int B)) %Int M [smt-lemma]

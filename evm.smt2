@@ -28,7 +28,7 @@
 (declare-fun sizeWordStack (WordStack) Int)
 (declare-fun asByteStack (Int WordStack) WordStack)
 
-(declare-fun uint160 (Int) WordStack)
+(declare-fun uint (Int) WordStack)
 
 (assert (= (sizeWordStack word_stack_empty) 0))
 (assert (forall ((w1 WordStack) (w2 WordStack))
