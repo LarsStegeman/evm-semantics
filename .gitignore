@@ -5,10 +5,6 @@
 # example in the gitignore man page to understand how this works.
 /.build/*
 
-!/.build/uiuck/
-/.build/uiuck/*
-!/.build/uiuck/*.k
-
 !/.build/rvk/
 /.build/rvk/*
 !/.build/rvk/*.k
@@ -19,6 +15,9 @@
 # the ethereum tests
 /tests/VMTests
 /tests/BlockchainTests
+
+/tests/proofs/*.k
+/tests/proofs/hkg/*.k
 
 # Directory for storing temporary files like logs, snippets and TODO lists.
 /tmp
