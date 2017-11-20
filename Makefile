@@ -58,7 +58,7 @@ tests/proofs/bad/hkg-token-buggy-spec.k: proofs/token-buggy-spec.md
 # Tests
 # -----
 
-split-tests: vm-tests blockchain-tests
+split-tests: vm-tests bchain-tests
 
 vm-tests: tests/VMTests/vmArithmeticTest/make.timestamp \
 		  tests/VMTests/vmBitwiseLogicOperationTest/make.timestamp \
@@ -74,8 +74,7 @@ vm-tests: tests/VMTests/vmArithmeticTest/make.timestamp \
 		  tests/VMTests/vmInputLimits/make.timestamp \
 		  tests/VMTests/vmInputLimitsLight/make.timestamp
 
-blockchain-tests: \
-				  $(patsubst tests/ethereum-tests/%.json,tests/%/make.timestamp, $(wildcard tests/ethereum-tests/BlockchainTests/GeneralStateTests/*/*.json)) \
+bchain-tests: $(patsubst tests/ethereum-tests/%.json,tests/%/make.timestamp, $(wildcard tests/ethereum-tests/BlockchainTests/GeneralStateTests/*/*.json))
 
 #passing_test_file=tests/passing.expected
 #blockchain_tests=$(shell cat ${passing_test_file})
