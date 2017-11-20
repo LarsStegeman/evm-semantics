@@ -15,8 +15,8 @@ clean:
 
 build: tangle .build/${K_VERSION}/driver-kompiled/extras/timestamp
 
-# Tangle from *.md files
-# ----------------------
+# Tangle definition from *.md files
+# ---------------------------------
 
 tangle: defn proof-tests
 
@@ -28,6 +28,67 @@ defn: $(defn_files)
 	@echo "==  tangle: $@"
 	mkdir -p $(dir $@)
 	pandoc-tangle --from markdown --to code-k --code ${K_VERSION} $< > $@
+
+# Tests
+# -----
+
+split-tests: vm-tests bchain-tests proof-tests
+
+tests/ethereum-tests/%.json:
+	@echo "==  git submodule: cloning upstreams test repository"
+	git submodule update --init -- tests/ethereum-tests
+
+tests/%/make.timestamp: tests/ethereum-tests/%.json
+	@echo "==   split: $@"
+	mkdir -p $(dir $@)
+	tests/split-test.py $< $(dir $@)
+	touch $@
+
+test: $(passing_targets)
+
+# ### VMTests
+
+vm-tests: tests/VMTests/vmArithmeticTest/make.timestamp \
+		  tests/VMTests/vmBitwiseLogicOperationTest/make.timestamp \
+		  tests/VMTests/vmBlockInfoTest/make.timestamp \
+		  tests/VMTests/vmEnvironmentalInfoTest/make.timestamp \
+		  tests/VMTests/vmIOandFlowOperationsTest/make.timestamp \
+		  tests/VMTests/vmLogTest/make.timestamp \
+		  tests/VMTests/vmPerformanceTest/make.timestamp \
+		  tests/VMTests/vmPushDupSwapTest/make.timestamp \
+		  tests/VMTests/vmSha3Test/make.timestamp \
+		  tests/VMTests/vmSystemOperationsTest/make.timestamp \
+		  tests/VMTests/vmtests/make.timestamp \
+		  tests/VMTests/vmInputLimits/make.timestamp \
+		  tests/VMTests/vmInputLimitsLight/make.timestamp
+
+tests/VMTests/%.test: tests/VMTests/% build
+	./vmtest $<
+
+# ### BlockchainTests
+
+tests/BlockchainTests/%.test: tests/BlockchainTests/% build
+	./blockchaintest $<
+
+bchain-tests: $(patsubst tests/ethereum-tests/%.json,tests/%/make.timestamp, $(wildcard tests/ethereum-tests/BlockchainTests/GeneralStateTests/*/*.json))
+
+#passing_test_file=tests/passing.expected
+#blockchain_tests=$(shell cat ${passing_test_file})
+blockchain_tests=$(wildcard tests/BlockchainTests/*/*/*/*.json)
+all_tests=$(wildcard tests/VMTests/*/*.json) ${blockchain_tests}
+skipped_tests=$(wildcard tests/VMTests/vmPerformanceTest/*.json) \
+   $(wildcard tests/BlockchainTests/GeneralStateTests/*/*/*_Byzantium.json) \
+   $(wildcard tests/BlockchainTests/GeneralStateTests/*/*/*_Constantinople.json) \
+   $(wildcard tests/BlockchainTests/GeneralStateTests/stQuadraticComplexityTest/*/*.json)
+
+passing_tests=$(filter-out ${skipped_tests}, ${all_tests})
+passing_blockchain_tests=$(filter-out ${skipped_tests}, ${blockchain_tests})
+passing_targets=${passing_tests:=.test}
+passing_blockchain_targets=${passing_blockchain_tests:=.test}
+
+blockchain-test: $(passing_blockchain_targets)
+
+# ### Proof Tests
 
 proof_dir=tests/proofs
 proof_files=${proof_dir}/sum-to-n-spec.k \
@@ -54,59 +115,6 @@ tests/proofs/bad/hkg-token-buggy-spec.k: proofs/token-buggy-spec.md
 	@echo "==  tangle: $@"
 	mkdir -p $(dir $@)
 	pandoc-tangle --from markdown --to code-k --code k $< > $@
-
-# Tests
-# -----
-
-split-tests: vm-tests bchain-tests proof-tests
-
-vm-tests: tests/VMTests/vmArithmeticTest/make.timestamp \
-		  tests/VMTests/vmBitwiseLogicOperationTest/make.timestamp \
-		  tests/VMTests/vmBlockInfoTest/make.timestamp \
-		  tests/VMTests/vmEnvironmentalInfoTest/make.timestamp \
-		  tests/VMTests/vmIOandFlowOperationsTest/make.timestamp \
-		  tests/VMTests/vmLogTest/make.timestamp \
-		  tests/VMTests/vmPerformanceTest/make.timestamp \
-		  tests/VMTests/vmPushDupSwapTest/make.timestamp \
-		  tests/VMTests/vmSha3Test/make.timestamp \
-		  tests/VMTests/vmSystemOperationsTest/make.timestamp \
-		  tests/VMTests/vmtests/make.timestamp \
-		  tests/VMTests/vmInputLimits/make.timestamp \
-		  tests/VMTests/vmInputLimitsLight/make.timestamp
-
-bchain-tests: $(patsubst tests/ethereum-tests/%.json,tests/%/make.timestamp, $(wildcard tests/ethereum-tests/BlockchainTests/GeneralStateTests/*/*.json))
-
-#passing_test_file=tests/passing.expected
-#blockchain_tests=$(shell cat ${passing_test_file})
-blockchain_tests=$(wildcard tests/BlockchainTests/*/*/*/*.json)
-all_tests=$(wildcard tests/VMTests/*/*.json) ${blockchain_tests}
-skipped_tests=$(wildcard tests/VMTests/vmPerformanceTest/*.json) \
-   $(wildcard tests/BlockchainTests/GeneralStateTests/*/*/*_Byzantium.json) \
-   $(wildcard tests/BlockchainTests/GeneralStateTests/*/*/*_Constantinople.json) \
-   $(wildcard tests/BlockchainTests/GeneralStateTests/stQuadraticComplexityTest/*/*.json)
-
-passing_tests=$(filter-out ${skipped_tests}, ${all_tests})
-passing_blockchain_tests=$(filter-out ${skipped_tests}, ${blockchain_tests})
-passing_targets=${passing_tests:=.test}
-passing_blockchain_targets=${passing_blockchain_tests:=.test}
-
-test: $(passing_targets)
-blockchain-test: $(passing_blockchain_targets)
-
-tests/VMTests/%.test: tests/VMTests/% build
-	./vmtest $<
-tests/BlockchainTests/%.test: tests/BlockchainTests/% build
-	./blockchaintest $<
-
-tests/%/make.timestamp: tests/ethereum-tests/%.json
-	@echo "==   split: $@"
-	mkdir -p $(dir $@)
-	tests/split-test.py $< $(dir $@)
-	touch $@
-
-tests/ethereum-tests/%.json:
-	@echo "==  git submodule: cloning upstreams test repository"
-	git submodule update --init -- tests/ethereum-tests
 
 # UIUC K Specific
 # ---------------
