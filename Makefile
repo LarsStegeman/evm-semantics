@@ -30,7 +30,7 @@ defn: $(defn_files)
 # Tests
 # -----
 
-split-tests: vm-tests bchain-tests proof-tests
+split-tests: bchain-tests proof-tests
 
 tests/ethereum-tests/%.json:
 	@echo "==  git submodule: cloning upstreams test repository"
@@ -43,25 +43,6 @@ tests/%/make.timestamp: tests/ethereum-tests/%.json
 	touch $@
 
 test: $(passing_targets)
-
-# ### VMTests
-
-vm-tests: tests/VMTests/vmArithmeticTest/make.timestamp \
-		  tests/VMTests/vmBitwiseLogicOperationTest/make.timestamp \
-		  tests/VMTests/vmBlockInfoTest/make.timestamp \
-		  tests/VMTests/vmEnvironmentalInfoTest/make.timestamp \
-		  tests/VMTests/vmIOandFlowOperationsTest/make.timestamp \
-		  tests/VMTests/vmLogTest/make.timestamp \
-		  tests/VMTests/vmPerformanceTest/make.timestamp \
-		  tests/VMTests/vmPushDupSwapTest/make.timestamp \
-		  tests/VMTests/vmSha3Test/make.timestamp \
-		  tests/VMTests/vmSystemOperationsTest/make.timestamp \
-		  tests/VMTests/vmtests/make.timestamp \
-		  tests/VMTests/vmInputLimits/make.timestamp \
-		  tests/VMTests/vmInputLimitsLight/make.timestamp
-
-tests/VMTests/%.test: tests/VMTests/% build
-	./vmtest $<
 
 # ### BlockchainTests
 
