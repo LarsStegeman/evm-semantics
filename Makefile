@@ -32,9 +32,10 @@ defn: $(defn_files)
 
 split-tests: bchain-tests proof-tests
 
-tests/ethereum-tests/%.json:
+tests/ethereum-tests/make.timestamp:
 	@echo "==  git submodule: cloning upstreams test repository"
 	git submodule update --init -- tests/ethereum-tests
+	touch $@
 
 tests/%/make.timestamp: tests/ethereum-tests/%.json
 	@echo "==   split: $@"
@@ -49,7 +50,7 @@ test: $(passing_targets)
 tests/BlockchainTests/%.test: tests/BlockchainTests/% build
 	./blockchaintest $<
 
-bchain-tests: $(patsubst tests/ethereum-tests/%.json,tests/%/make.timestamp, $(wildcard tests/ethereum-tests/BlockchainTests/GeneralStateTests/*/*.json))
+bchain-tests: tests/ethereum-tests/make.timestamp $(patsubst tests/ethereum-tests/%.json,tests/%/make.timestamp, $(wildcard tests/ethereum-tests/BlockchainTests/GeneralStateTests/*/*.json))
 
 #passing_test_file=tests/passing.expected
 #blockchain_tests=$(shell cat ${passing_test_file})
